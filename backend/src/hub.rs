@@ -44,6 +44,10 @@ pub enum ClientMsg {
         session: Option<Uuid>,
     },
     Cursor {
+        /// Eier-id for tilen pekeren er over; koordinatene er normalisert
+        /// innenfor den tilen, slik at pekeren treffer riktig uansett
+        /// hvilken layout mottakeren ser (min skjerm / alle / wall).
+        tile: Uuid,
         x: f64,
         y: f64,
     },
@@ -73,6 +77,7 @@ pub enum ServerMsg<'a> {
         id: Uuid,
         color: &'a str,
         name: &'a str,
+        tile: Uuid,
         x: f64,
         y: f64,
     },
@@ -146,7 +151,7 @@ impl Hub {
         self.broadcast(msg);
     }
 
-    pub fn broadcast_cursor(&self, id: Uuid, x: f64, y: f64) {
+    pub fn broadcast_cursor(&self, id: Uuid, tile: Uuid, x: f64, y: f64) {
         let inner = self.inner.lock().unwrap();
         let Some(p) = inner.participants.get(&id) else {
             return;
@@ -155,6 +160,7 @@ impl Hub {
             id,
             color: &p.color,
             name: &p.name,
+            tile,
             x,
             y,
         })

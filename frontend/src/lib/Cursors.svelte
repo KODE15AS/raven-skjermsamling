@@ -1,11 +1,18 @@
 <script>
-  // Fargede ghost-cursors: HTML-overlay (ikke OS-pekere) posisjonert med
-  // normaliserte koordinater relativt til tile-området.
+  // Fargede ghost-cursors for ÉN tile: HTML-overlay (ikke OS-pekere) med
+  // koordinater normalisert innenfor tilen, så pekeren treffer riktig
+  // uansett hvilken layout mottakeren ser (min skjerm / alle / wall).
   import { cursors } from './store.js';
+
+  let { tileId } = $props();
+
+  const visible = $derived(
+    [...$cursors].filter(([, c]) => c.tile === tileId)
+  );
 </script>
 
 <div class="cursors" aria-hidden="true">
-  {#each [...$cursors] as [id, c] (id)}
+  {#each visible as [id, c] (id)}
     <div class="cursor" style="left: {c.x * 100}%; top: {c.y * 100}%">
       <svg width="22" height="22" viewBox="0 0 24 24">
         <path

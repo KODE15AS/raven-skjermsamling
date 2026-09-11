@@ -163,7 +163,7 @@ async fn handle_socket(socket: WebSocket, hub: Arc<Hub>) {
             continue;
         };
         match parsed {
-            ClientMsg::Cursor { x, y } => hub.broadcast_cursor(id, x, y),
+            ClientMsg::Cursor { tile, x, y } => hub.broadcast_cursor(id, tile, x, y),
             ClientMsg::Minimize => hub.set_minimized(id, true),
             ClientMsg::Restore => hub.set_minimized(id, false),
             ClientMsg::Control { target } => {

@@ -9,7 +9,8 @@ export const maxActive = writable(4);
 export const activeWorkspaces = writable(0);
 export const lastError = writable(null);
 
-// id -> { x, y, color, name, ts }
+// id -> { tile, x, y, color, name, ts } – koordinater normalisert innenfor
+// tilen til deltageren `tile`, så pekere treffer riktig i alle layouts.
 export const cursors = writable(new Map());
 
 export const deltagere = derived(participants, (p) => p.filter((x) => x.role === 'deltager'));
@@ -59,7 +60,14 @@ function handleMessage(ev) {
       if (me && msg.id === me.id) break; // ikke vis egen ghost-cursor
       cursors.update((m) => {
         const next = new Map(m);
-        next.set(msg.id, { x: msg.x, y: msg.y, color: msg.color, name: msg.name, ts: Date.now() });
+        next.set(msg.id, {
+          tile: msg.tile,
+          x: msg.x,
+          y: msg.y,
+          color: msg.color,
+          name: msg.name,
+          ts: Date.now(),
+        });
         return next;
       });
       break;
@@ -136,11 +144,12 @@ function send(obj) {
 }
 
 let lastCursorSent = 0;
-export function sendCursor(x, y) {
+/** Send egen pekerposisjon, normalisert innenfor tilen til deltager `tile`. */
+export function sendCursor(tile, x, y) {
   const now = performance.now();
   if (now - lastCursorSent < 33) return; // ~30 Hz
   lastCursorSent = now;
-  send({ type: 'cursor', x, y });
+  send({ type: 'cursor', tile, x, y });
 }
 
 export const minimize = () => send({ type: 'minimize' });

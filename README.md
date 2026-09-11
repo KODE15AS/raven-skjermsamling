@@ -70,9 +70,10 @@ tastatur- eller mus-input (egen `watch`-modus i WebSocket-protokollen).
 | Egen Chrome på Raven | Ephemeral container per deltager; slettes ved leave eller når disconnect-timeout utløper (`WORKSPACE_TIMEOUT_SECS`) |
 | Tilbake uten ny session | Session-token i localStorage; reconnect innen timeout gjenbruker workspacen |
 | Tiles på 70" | Responsivt grid som tilpasser seg antall aktive tiles (1/2/2×2/3×2/3×3) |
-| Minimize/restore | Egen tile kan minimeres til navnefane nederst; kun eieren kan restore |
+| «Min skjerm» / «Alle» | `/samling` åpner i «Min skjerm» (kun egen workspace – samlingen ser man på 70"-veggen). Klikk på en deltager-chip for å se/peke på/ta over dennes workspace, eller bytt til «Alle» for grid med alt |
+| Minimize/restore | Egen tile kan skjules fra veggen (navnefane i «Alle»-visningen); kun eieren kan vise den igjen |
 | Demokratisk kontroll | Dobbeltklikk en annen tile → aktiver kontroll. Grønn eierramme beholdes, kontrollerens farge vises som ytre ramme + «X kontrollerer». Esc eller dobbeltklikk avslutter. Kun én ekstern controller per workspace |
-| Fargede ghost-cursors | HTML-overlay (ikke OS-pekere) med navn, normaliserte x/y via WebSocket, ~30 Hz |
+| Fargede ghost-cursors | HTML-overlay (ikke OS-pekere) med navn, tile-relative x/y via WebSocket (~30 Hz) – pekeren treffer riktig tile uansett hvilken visning mottakeren ser |
 | Observer | Navn/farge og presence, ser alle workspaces, får aldri egen Chrome og sender aldri OS-input |
 
 ## Konfigurasjon

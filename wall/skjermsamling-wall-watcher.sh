@@ -85,9 +85,11 @@ kiosk_running() {
 }
 
 start_kiosk() {
-  # --start-fullscreen i tillegg til --kiosk: under Wayland ignorerer
-  # Chromium av og til --kiosk og åpner i vindu.
+  # Chromium på ren Wayland ignorerer --kiosk/--start-fullscreen (kjent bug);
+  # --ozone-platform=x11 tvinger XWayland, der kiosk-modus fungerer pålitelig.
+  # På en ren X11-session er flagget harmløst (x11 brukes uansett).
   local args=(
+    --ozone-platform=x11
     --kiosk
     --start-fullscreen
     --noerrdialogs

@@ -64,6 +64,7 @@ er containeren nede startes ingen kiosk, og en åpen kiosk lukkes. Den vanlige
 Installasjon (én gang, på Raven):
 
 ```bash
+sudo apt install -y wmctrl   # brukes til å tvinge fullskjerm (Wayland ignorerer Chromiums egne flagg)
 sudo mkdir -p /opt/skjermsamling
 sudo cp wall/skjermsamling-wall-watcher.sh /opt/skjermsamling/
 cp wall/skjermsamling-wall-watcher.desktop ~/.config/autostart/

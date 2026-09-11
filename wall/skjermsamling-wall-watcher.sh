@@ -84,9 +84,42 @@ kiosk_running() {
   pgrep -f -- "user-data-dir=$PROFILE" >/dev/null 2>&1
 }
 
+# Chromiums egne fullskjerm-flagg blir ignorert i enkelte Wayland/snap-oppsett.
+# Derfor tvinger vi i tillegg fullskjerm på vindusbehandler-nivå: vent til
+# kiosk-vinduet finnes (matchet på PID, så vi aldri rører andre vinduer), og
+# sett fullskjerm-state med wmctrl eller xdotool. Krever at én av dem er
+# installert (sudo apt install -y wmctrl).
+force_fullscreen() {
+  local i pid wid
+  for i in $(seq 1 30); do
+    sleep 1
+    pid="$(pgrep -of -- "user-data-dir=$PROFILE" 2>/dev/null)"
+    [ -n "$pid" ] || continue
+    if command -v wmctrl >/dev/null 2>&1; then
+      wid="$(wmctrl -lp 2>/dev/null | awk -v p="$pid" '$3==p {print $1; exit}')"
+      [ -n "$wid" ] || continue
+      wmctrl -i -r "$wid" -b add,fullscreen 2>/dev/null
+      log "Tvang kiosk-vinduet til fullskjerm (wmctrl)"
+      return 0
+    elif command -v xdotool >/dev/null 2>&1; then
+      wid="$(xdotool search --pid "$pid" --onlyvisible 2>/dev/null | head -1)"
+      [ -n "$wid" ] || continue
+      xdotool key --window "$wid" F11 2>/dev/null
+      log "Tvang kiosk-vinduet til fullskjerm (xdotool)"
+      return 0
+    else
+      log "MERK: verken wmctrl eller xdotool er installert – kan ikke tvinge fullskjerm automatisk. Installer med: sudo apt install -y wmctrl"
+      return 1
+    fi
+  done
+  log "MERK: fant aldri kiosk-vinduet – fullskjerm ble ikke tvunget"
+  return 1
+}
+
 start_kiosk() {
   # Chromium på ren Wayland ignorerer --kiosk/--start-fullscreen (kjent bug);
-  # --ozone-platform=x11 tvinger XWayland, der kiosk-modus fungerer pålitelig.
+  # --ozone-platform=x11 tvinger XWayland, der kiosk-modus fungerer pålitelig
+  # OG gjør vinduet synlig for wmctrl/xdotool.
   # På en ren X11-session er flagget harmløst (x11 brukes uansett).
   local args=(
     --ozone-platform=x11
@@ -100,8 +133,11 @@ start_kiosk() {
     args+=(--window-position="$POSITION")
   fi
   args+=("$URL")
+  # Frisk profil hver gang, så gammel vindusstørrelse aldri gjenbrukes.
+  rm -rf "$PROFILE"
   log "70\"-skjerm oppdaget (match: $MATCH) – starter kiosk: $BROWSER"
   nohup "$BROWSER" "${args[@]}" >/dev/null 2>&1 &
+  force_fullscreen &
 }
 
 stop_kiosk() {

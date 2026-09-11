@@ -50,16 +50,48 @@ trykker **Gå til Skjermsamling**.
 
 ### 70"-veggen
 
-Kjør Chromium i kiosk-modus på Ravens lokale Ubuntu-desktop (motherboard-HDMI
-/ UHD 770):
+`/wall` er alltid read-only: den joiner aldri sessionen og sender aldri
+tastatur- eller mus-input (egen `watch`-modus i WebSocket-protokollen).
+
+**Automatisk kiosk (anbefalt):** `wall/skjermsamling-wall-watcher.sh` kjører
+på Ravens lokale Ubuntu-desktop og starter Chromium i kiosk-modus på `/wall`
+automatisk når 70"-skjermen kobles til (gjenkjennes på at EDID inneholder
+`SAMSUNG`), og lukker kiosken igjen når den kobles fra. Skriptet sjekker også
+at Skjermsamling-tjenesten faktisk kjører (via `/healthz`) før det gjør noe —
+er containeren nede startes ingen kiosk, og en åpen kiosk lukkes. Den vanlige
+24"-skjermen trigger ingenting.
+
+Installasjon (én gang, på Raven):
+
+```bash
+sudo mkdir -p /opt/skjermsamling
+sudo cp wall/skjermsamling-wall-watcher.sh /opt/skjermsamling/
+cp wall/skjermsamling-wall-watcher.desktop ~/.config/autostart/
+# Start uten å logge ut/inn:
+/opt/skjermsamling/skjermsamling-wall-watcher.sh &
+```
+
+Verifiser hva skjermene identifiserer seg som (EDID) hvis matchen må justeres:
+
+```bash
+for d in /sys/class/drm/card*-*/; do
+  echo "$d: $(cat $d/status 2>/dev/null)"
+  strings "$d/edid" 2>/dev/null | head -3
+done
+```
+
+Miljøvariabler: `WALL_MATCH` (default `SAMSUNG`), `WALL_URL` (default
+`http://localhost:8015/wall`), `WALL_HEALTH_URL` (default
+`http://localhost:8015/healthz`), `WALL_BROWSER`, `WALL_POLL_SECS` (default 3)
+og `WALL_POSITION` («X,Y», styrer hvilken skjerm kiosken havner på hvis både
+24" og 70" er tilkoblet samtidig; finn posisjonen med `xrandr --query`).
+
+**Manuelt alternativ:**
 
 ```bash
 chromium --kiosk --noerrdialogs --disable-session-crashed-bubble \
   http://localhost:8015/wall
 ```
-
-`/wall` er alltid read-only: den joiner aldri sessionen og sender aldri
-tastatur- eller mus-input (egen `watch`-modus i WebSocket-protokollen).
 
 ## Funksjoner i MVP
 

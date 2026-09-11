@@ -101,6 +101,9 @@
     {:else if p.workspace?.state === 'error'}
       <div class="placeholder err">
         <span>⚠ {p.workspace.message}</span>
+        {#if isOwner}
+          <span class="retry-hint">Last siden på nytt for å prøve igjen</span>
+        {/if}
       </div>
     {:else}
       <div class="placeholder"><span>Venter …</span></div>
@@ -259,6 +262,11 @@
     color: var(--danger);
     text-align: center;
     padding: 1rem;
+  }
+
+  .retry-hint {
+    color: var(--text-dim);
+    font-size: 0.85rem;
   }
 
   .spinner {

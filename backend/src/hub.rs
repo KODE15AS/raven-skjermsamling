@@ -186,8 +186,13 @@ impl Hub {
                         session: tok,
                     })
                     .unwrap();
+                    // Provisjonér på nytt både når workspace mangler og når
+                    // forrige forsøk feilet — reload av siden blir da retry.
                     let needs_ws = role == Role::Deltager
-                        && matches!(p.workspace, WorkspaceState::None);
+                        && matches!(
+                            p.workspace,
+                            WorkspaceState::None | WorkspaceState::Error { .. }
+                        );
                     self.db.log_event("reconnect", &p.name);
                     return (pid, tok, welcome, needs_ws);
                 }

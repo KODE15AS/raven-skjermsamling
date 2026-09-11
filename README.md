@@ -80,7 +80,7 @@ tastatur- eller mus-input (egen `watch`-modus i WebSocket-protokollen).
 | Variabel | Default | Beskrivelse |
 | --- | --- | --- |
 | `MAX_ACTIVE_WORKSPACES` | `4` | Maks samtidige workspaces. Start konservativt, benchmark Raven før økning |
-| `WORKSPACE_IMAGE` | `lscr.io/linuxserver/chromium:latest` | Image for Chrome-workspaces |
+| `WORKSPACE_IMAGE` | `lscr.io/linuxserver/chromium:kasm` | Image for Chrome-workspaces (se merknad om Selkies/HTTPS under) |
 | `WORKSPACE_MEMORY` / `WORKSPACE_CPUS` / `WORKSPACE_SHM_SIZE` | `3g` / `2` / `1g` | Ressursgrenser per workspace |
 | `WORKSPACE_TIMEOUT_SECS` | `120` | Tid fra disconnect til workspacen stoppes og slettes |
 | `WORKSPACE_READY_TIMEOUT_SECS` | `180` | Maks ventetid på at streamen svarer før oppstart regnes som feilet |
@@ -125,6 +125,14 @@ kan testes på en vanlig utviklingsmaskin.
 
 ## Notater til neste handover
 
+- **Selkies/HTTPS**: `linuxserver/chromium:latest` byttet til Selkies
+  (juni 2025), som krever secure context (HTTPS med gyldig sertifikat) og
+  viser «This application requires a secure connection» over ren HTTP.
+  MVP bruker derfor den frosne Kasm-branchen (`:kasm`, deprecated juli 2026)
+  som fungerer over HTTP på lukket nett. Riktig oppgradering senere:
+  TLS-terminering foran hele tjenesten (f.eks. `tailscale serve` eller
+  Caddy/SWAG med gyldig sertifikat) + proxy av workspace-portene gjennom
+  samme origin, og deretter bytte tilbake til Selkies-imaget.
 - Første join etter deploy laster ned workspace-imaget (~4–5 GB); kjør
   `docker pull` av `WORKSPACE_IMAGE` på forhånd for å unngå lang ventetid.
 - Oppstartsfeil vises nå med tydelig melding på tilen og reload av siden

@@ -19,7 +19,7 @@
   setInterval(() => (clock.t = fmt()), 10_000);
 </script>
 
-<div class="wall">
+<div class="wall dark">
   <TileGrid participants={$participants} viewer={null} readonly={true} />
 
   <footer class="wallbar">
@@ -50,15 +50,16 @@
     align-items: center;
     gap: 1.2rem;
     padding: 0.5rem 1.2rem;
-    background: #0a0f14;
+    background: rgba(38, 50, 70, 0.97); /* KODE15-navy */
     border-top: 1px solid #182029;
     font-size: 1rem;
   }
 
   .brand {
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    color: var(--text-dim);
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    color: var(--k15-beige);
   }
 
   .people {
@@ -104,7 +105,7 @@
   }
 
   .conn.ok {
-    background: #2ecc40;
+    background: var(--success);
     animation: none;
   }
 </style>

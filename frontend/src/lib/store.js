@@ -94,8 +94,18 @@ function openSocket() {
 export function join(name, role) {
   localStorage.setItem(NAME_KEY, name);
   localStorage.setItem(ROLE_KEY, role);
-  watchMode = false;
   joinPayload = { name, role };
+  if (watchMode) {
+    // Oppgrader fra read-only forhåndsvisning til ekte deltagelse.
+    watchMode = false;
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+      ws = null;
+    }
+    openSocket();
+    return;
+  }
   if (ws && ws.readyState === WebSocket.OPEN) {
     const session = localStorage.getItem(SESSION_KEY) || undefined;
     ws.send(JSON.stringify({ type: 'join', name, role, session }));

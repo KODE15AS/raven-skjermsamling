@@ -11,6 +11,7 @@
     savedName,
     savedRole,
     rejoinIfPossible,
+    watch,
   } from '../lib/store.js';
   import Roster from '../lib/Roster.svelte';
 
@@ -19,8 +20,9 @@
   let name = $state(savedName());
   let role = $state(savedRole());
 
-  // Kom tilbake til eksisterende session automatisk.
-  rejoinIfPossible();
+  // Kom tilbake til eksisterende session automatisk, ellers koble til
+  // read-only for å vise live-status før man blir med.
+  if (!rejoinIfPossible()) watch();
 
   function submit(e) {
     e.preventDefault();
@@ -46,8 +48,8 @@
         <span></span><span></span><span></span><span></span>
       </div>
       <div>
-        <h1>Skjermsamling</h1>
-        <p class="sub">Raven · felles interaktiv arbeidsflate</p>
+        <h1>SKJERMSAMLING</h1>
+        <p class="sub">KODE15 · Raven · felles interaktiv arbeidsflate</p>
       </div>
     </header>
 
@@ -89,6 +91,13 @@
         <button class="btn-primary wide" type="submit" disabled={!name.trim()}>
           Bli med
         </button>
+
+        {#if $participants.length > 0}
+          <div class="preview">
+            <span class="preview-label">Inne nå</span>
+            <Roster participants={$participants} youId={null} />
+          </div>
+        {/if}
       </form>
     {:else}
       <div class="joined">
@@ -160,8 +169,12 @@
 
   h1 {
     margin: 0;
-    font-size: 1.6rem;
-    letter-spacing: -0.02em;
+    font-family: var(--font-display);
+    font-size: 2.1rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--k15-navy);
   }
 
   .sub {
@@ -193,7 +206,7 @@
   }
 
   input:focus {
-    border-color: var(--accent);
+    border-color: var(--k15-beige);
   }
 
   .roles {
@@ -220,8 +233,8 @@
   }
 
   .roles button.active {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 10%, var(--bg-elev-2));
+    border-color: var(--k15-navy);
+    background: color-mix(in srgb, var(--k15-beige) 22%, var(--bg-elev-2));
   }
 
   .wide {
@@ -263,8 +276,23 @@
     font-size: 0.85rem;
   }
 
+  .preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.9rem;
+  }
+
+  .preview-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+
   .error {
-    background: color-mix(in srgb, var(--danger) 16%, var(--bg-elev));
+    background: color-mix(in srgb, var(--danger) 12%, var(--bg-elev));
     border: 1px solid var(--danger);
     border-radius: var(--radius);
     padding: 0.6rem 0.9rem;
@@ -290,7 +318,7 @@
   }
 
   .conn.ok {
-    background: #2ecc40;
+    background: var(--success);
     animation: none;
   }
 </style>

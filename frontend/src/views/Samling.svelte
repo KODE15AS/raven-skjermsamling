@@ -34,7 +34,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div class="samling">
+<div class="samling dark">
   <header class="topbar">
     <button class="home" onclick={() => navigate('/')} title="Til lobby">
       Skjermsamling
@@ -102,21 +102,22 @@
     align-items: center;
     gap: 1rem;
     padding: 0.45rem 0.9rem;
-    background: var(--bg-elev);
+    background: rgba(38, 50, 70, 0.97); /* KODE15-navy */
     border-bottom: 1px solid var(--border);
   }
 
   .home {
     background: none;
-    color: var(--text);
-    font-weight: 800;
-    font-size: 0.95rem;
-    letter-spacing: -0.01em;
+    color: #f3f1ec;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.15rem;
+    letter-spacing: 0.05em;
     padding: 0;
   }
 
   .home:hover {
-    color: var(--accent);
+    color: var(--k15-beige);
   }
 
   .chips {
@@ -159,7 +160,7 @@
   }
 
   .conn.ok {
-    background: #2ecc40;
+    background: var(--success);
     animation: none;
   }
 
@@ -178,7 +179,7 @@
 
   .control-banner {
     text-align: center;
-    background: color-mix(in srgb, var(--accent) 14%, var(--bg-elev));
+    background: color-mix(in srgb, var(--k15-beige) 22%, var(--bg-elev));
     border-bottom: 1px solid var(--border);
     font-size: 0.82rem;
     padding: 0.3rem;
@@ -196,7 +197,7 @@
     display: flex;
     gap: 0.5rem;
     padding: 0.45rem 0.9rem;
-    background: var(--bg-elev);
+    background: rgba(38, 50, 70, 0.97);
     border-top: 1px solid var(--border);
   }
 

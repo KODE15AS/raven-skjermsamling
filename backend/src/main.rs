@@ -74,10 +74,12 @@ async fn ws_handler(
 async fn handle_watch_socket(socket: WebSocket, hub: Arc<Hub>) {
     use futures_util::{SinkExt, StreamExt};
     let (mut tx_ws, mut rx_ws) = socket.split();
+    // Abonner FØR snapshotet sendes, ellers kan endringer mellom snapshot og
+    // abonnement gå tapt.
+    let mut rx_bcast = hub.subscribe();
     if tx_ws.send(Message::Text(hub.roster_json())).await.is_err() {
         return;
     }
-    let mut rx_bcast = hub.subscribe();
     let forward = tokio::spawn(async move {
         while let Ok(msg) = rx_bcast.recv().await {
             if tx_ws.send(Message::Text(msg)).await.is_err() {
@@ -93,6 +95,10 @@ async fn handle_watch_socket(socket: WebSocket, hub: Arc<Hub>) {
 async fn handle_socket(socket: WebSocket, hub: Arc<Hub>) {
     use futures_util::{SinkExt, StreamExt};
     let (mut tx_ws, mut rx_ws) = socket.split();
+
+    // Abonner FØR join fullføres, slik at roster-endringer som skjer i det
+    // samme øyeblikket (f.eks. workspace-provisjonering) ikke går tapt.
+    let mut rx_bcast = hub.subscribe();
 
     // Første melding må være join.
     let (id, needs_workspace) = loop {
@@ -122,6 +128,12 @@ async fn handle_socket(socket: WebSocket, hub: Arc<Hub>) {
                 if tx_ws.send(Message::Text(welcome)).await.is_err() {
                     return;
                 }
+                // Send roster-snapshot direkte til denne socketen, slik at
+                // f.eks. en reconnectet /samling-fane har full tilstand
+                // umiddelbart selv om ingen nye endringer broadcastes.
+                if tx_ws.send(Message::Text(hub.roster_json())).await.is_err() {
+                    return;
+                }
                 break (id, needs_ws);
             }
             _ => continue,
@@ -135,7 +147,6 @@ async fn handle_socket(socket: WebSocket, hub: Arc<Hub>) {
     hub.broadcast_roster();
 
     // Videresend broadcast-meldinger til denne klienten.
-    let mut rx_bcast = hub.subscribe();
     let forward = tokio::spawn(async move {
         while let Ok(msg) = rx_bcast.recv().await {
             if tx_ws.send(Message::Text(msg)).await.is_err() {

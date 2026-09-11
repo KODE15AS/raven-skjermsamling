@@ -237,17 +237,47 @@ impl CliDriver {
         }
     }
 
-    /// TCP-probe mot publisert workspace-port. Inne i compose-containeren
+    /// HTTP-probe mot publisert workspace-port. Inne i compose-containeren
     /// nås vertens porter via host.docker.internal (extra_hosts i compose);
     /// ved kjøring rett på verten faller vi tilbake til 127.0.0.1.
+    ///
+    /// En ren TCP-connect er ikke nok: nginx i workspace-imaget aksepterer
+    /// tilkoblinger før tjenestene bak er klare og svarer da 502. Vi krever
+    /// derfor et ekte HTTP-svar med status < 500 før workspacen regnes som
+    /// klar, slik at tiles aldri får en URL som viser «502 Bad Gateway».
     async fn probe(&self, port: u16) -> bool {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
         for host in [self.probe_host.as_str(), "127.0.0.1"] {
             let attempt = tokio::time::timeout(
                 Duration::from_millis(1000),
                 tokio::net::TcpStream::connect((host, port)),
             );
-            if matches!(attempt.await, Ok(Ok(_))) {
-                return true;
+            let Ok(Ok(mut stream)) = attempt.await else {
+                continue;
+            };
+            let req = b"GET / HTTP/1.0\r\nHost: probe\r\nConnection: close\r\n\r\n";
+            if stream.write_all(req).await.is_err() {
+                continue;
+            }
+            let mut buf = [0u8; 64];
+            let Ok(Ok(n)) = tokio::time::timeout(
+                Duration::from_millis(1500),
+                stream.read(&mut buf),
+            )
+            .await
+            else {
+                continue;
+            };
+            // Statuslinje: "HTTP/1.1 200 OK"
+            let line = String::from_utf8_lossy(&buf[..n]);
+            if let Some(code) = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|c| c.parse::<u16>().ok())
+            {
+                if code < 500 {
+                    return true;
+                }
             }
         }
         false

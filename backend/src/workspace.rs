@@ -47,6 +47,9 @@ pub struct CliDriver {
     /// Vertsnavn klientene skal nå workspacen på. Tom streng betyr at
     /// frontend erstatter `{host}` med window.location.hostname.
     public_host: String,
+    /// Vertsnavn controlleren bruker for readiness-probe mot publiserte
+    /// workspace-porter (inne i compose-containeren: host.docker.internal).
+    probe_host: String,
 }
 
 fn env_or(key: &str, default: &str) -> String {
@@ -64,6 +67,7 @@ impl Controller {
                 cpus: env_or("WORKSPACE_CPUS", "2"),
                 shm_size: env_or("WORKSPACE_SHM_SIZE", "1g"),
                 public_host: env_or("WORKSPACE_PUBLIC_HOST", ""),
+                probe_host: env_or("WORKSPACE_PROBE_HOST", "host.docker.internal"),
             }),
         };
         Self { driver, max_active }
@@ -123,17 +127,27 @@ impl Controller {
     }
 
     /// Hjelper for normal oppstartsflyt: create + start + vent til klar.
+    /// `status` rapporterer først Running når streamen faktisk svarer på
+    /// porten, så tilen aldri får en URL som avviser tilkoblinger.
     pub async fn provision(&self, ws_id: &str) -> Result<WorkspaceState> {
+        // Rydd bort ev. etterlatt container med samme navn (f.eks. etter
+        // backend-restart eller feilet forrige forsøk) før nytt forsøk.
+        let _ = self.destroy(ws_id).await;
         self.create(ws_id).await?;
         self.start(ws_id).await?;
-        // Vent på at containeren er oppe og porten er publisert.
-        for _ in 0..60 {
-            if let WorkspaceState::Running { url } = self.status(ws_id).await? {
-                return Ok(WorkspaceState::Running { url });
+        let timeout_secs: u64 = std::env::var("WORKSPACE_READY_TIMEOUT_SECS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(180);
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(timeout_secs);
+        while tokio::time::Instant::now() < deadline {
+            match self.status(ws_id).await? {
+                WorkspaceState::Running { url } => return Ok(WorkspaceState::Running { url }),
+                WorkspaceState::Error { message } => bail!("workspace feilet: {message}"),
+                _ => tokio::time::sleep(Duration::from_millis(500)).await,
             }
-            tokio::time::sleep(Duration::from_millis(500)).await;
         }
-        bail!("workspace ble ikke klar innen tidsfristen")
+        bail!("workspace ble ikke klar innen {timeout_secs} sekunder")
     }
 }
 
@@ -142,6 +156,11 @@ impl CliDriver {
         // Sikkerhetskrav fra handover: aldri Docker socket, aldri --privileged,
         // aldri host filesystem, aldri host network, aldri RTX 5080.
         // Argumentlisten er fast og bygges kun fra server-side konfig.
+        //
+        // Alle capabilities droppes, og kun de fem s6-init/nginx i
+        // linuxserver-imagene faktisk trenger legges tilbake (uten disse
+        // crash-looper tjenestene inne i containeren med
+        // "chown: Operation not permitted").
         let port_spec = "0.0.0.0::3000"; // tilfeldig vertsport -> KasmVNC web
         let args = [
             "create",
@@ -153,6 +172,16 @@ impl CliDriver {
             "no-new-privileges:true",
             "--cap-drop",
             "ALL",
+            "--cap-add",
+            "CHOWN",
+            "--cap-add",
+            "SETUID",
+            "--cap-add",
+            "SETGID",
+            "--cap-add",
+            "FOWNER",
+            "--cap-add",
+            "DAC_OVERRIDE",
             "--shm-size",
             &self.shm_size,
             "--memory",
@@ -178,13 +207,19 @@ impl CliDriver {
             "running" => {
                 let port_out = docker(&["port", name, "3000/tcp"]).await?;
                 // Format: "0.0.0.0:49155" (ev. flere linjer med IPv6)
-                let port = port_out
+                let port: u16 = port_out
                     .lines()
                     .filter_map(|l| l.rsplit(':').next())
                     .next()
                     .context("fant ikke publisert port")?
                     .trim()
-                    .to_string();
+                    .parse()
+                    .context("ugyldig portnummer")?;
+                // Readiness: rapportér først Running når streamen faktisk
+                // aksepterer tilkoblinger på den publiserte porten.
+                if !self.probe(port).await {
+                    return Ok(WorkspaceState::Starting);
+                }
                 let host = if self.public_host.is_empty() {
                     "{host}".to_string()
                 } else {
@@ -200,6 +235,22 @@ impl CliDriver {
             }),
             _ => Ok(WorkspaceState::Starting),
         }
+    }
+
+    /// TCP-probe mot publisert workspace-port. Inne i compose-containeren
+    /// nås vertens porter via host.docker.internal (extra_hosts i compose);
+    /// ved kjøring rett på verten faller vi tilbake til 127.0.0.1.
+    async fn probe(&self, port: u16) -> bool {
+        for host in [self.probe_host.as_str(), "127.0.0.1"] {
+            let attempt = tokio::time::timeout(
+                Duration::from_millis(1000),
+                tokio::net::TcpStream::connect((host, port)),
+            );
+            if matches!(attempt.await, Ok(Ok(_))) {
+                return true;
+            }
+        }
+        false
     }
 }
 

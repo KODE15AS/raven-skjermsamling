@@ -83,6 +83,8 @@ tastatur- eller mus-input (egen `watch`-modus i WebSocket-protokollen).
 | `WORKSPACE_IMAGE` | `lscr.io/linuxserver/chromium:latest` | Image for Chrome-workspaces |
 | `WORKSPACE_MEMORY` / `WORKSPACE_CPUS` / `WORKSPACE_SHM_SIZE` | `3g` / `2` / `1g` | Ressursgrenser per workspace |
 | `WORKSPACE_TIMEOUT_SECS` | `120` | Tid fra disconnect til workspacen stoppes og slettes |
+| `WORKSPACE_READY_TIMEOUT_SECS` | `180` | Maks ventetid på at streamen svarer før oppstart regnes som feilet |
+| `WORKSPACE_PROBE_HOST` | `host.docker.internal` | Vertsnavn controlleren bruker for readiness-probe (faller tilbake til 127.0.0.1) |
 | `WORKSPACE_PUBLIC_HOST` | *(tom)* | Vertsnavn klientene når workspacene på; tom = samme host som nettleseren bruker |
 | `WORKSPACE_DRIVER` | `docker` | `mock` for utvikling uten Docker |
 | `BIND` | `0.0.0.0:8015` | Backendens lytteadresse |
@@ -117,3 +119,15 @@ kan testes på en vanlig utviklingsmaskin.
 - Sessions er ephemeral: ingen brukerprofiler; workspaces slettes ved leave
   eller timeout. Brukeren logger selv inn på ønskede websider inne i sin
   Chrome-session.
+- Workspace-containerne kjører med `--cap-drop ALL` pluss kun de fem
+  capabilities linuxserver-imagene faktisk trenger (CHOWN, SETUID, SETGID,
+  FOWNER, DAC_OVERRIDE) — uten disse crash-looper s6/nginx inne i containeren.
+
+## Notater til neste handover
+
+- Første join etter deploy laster ned workspace-imaget (~4–5 GB); kjør
+  `docker pull` av `WORKSPACE_IMAGE` på forhånd for å unngå lang ventetid.
+- Oppstartsfeil vises nå med tydelig melding på tilen og reload av siden
+  trigger nytt forsøk; automatisk retry med backoff kan vurderes senere.
+- Raven svarte ikke på lokalnett-IP (kun Tailscale) under første test —
+  sjekk brannmur/subnett hvis LAN-tilgang ønskes.

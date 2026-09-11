@@ -174,7 +174,7 @@
     font-weight: 400;
     letter-spacing: 0.04em;
     line-height: 1;
-    color: var(--k15-navy);
+    color: var(--k15-muted);
   }
 
   .sub {
@@ -233,7 +233,7 @@
   }
 
   .roles button.active {
-    border-color: var(--k15-navy);
+    border-color: var(--k15-accent);
     background: color-mix(in srgb, var(--k15-beige) 22%, var(--bg-elev-2));
   }
 

@@ -5,13 +5,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@600;700&family=Open+Sans:wght@400;600;700&display=swap');
 
 :root {
-  /* KODE15 design tokens */
+  /* KODE15 design tokens (kanonisk: kode15.no / elduro) */
   --k15-bg: #f3f1ec;
   --k15-card: #ffffff;
-  --k15-ink: #233038;
+  --k15-ink: #141618;
+  --k15-accent: #778395;
   --k15-muted: #525c64;
   --k15-beige: #baac99;
-  --k15-navy: #263246;
+  --k15-navy: #263246; /* mørk chrome for stream-scenen (kodelader-variant) */
   --k15-line: #d4d4d4;
   --success: #54d16a;
   --warning: #ea8f01;
@@ -28,7 +29,7 @@
   --border: var(--k15-line);
   --text: var(--k15-ink);
   --text-dim: var(--k15-muted);
-  --accent: var(--k15-navy);
+  --accent: var(--k15-accent);
   --accent-text: #ffffff;
   --shadow: 0 1px 3px rgba(35, 48, 56, 0.08), 0 14px 36px rgba(35, 48, 56, 0.12);
 }

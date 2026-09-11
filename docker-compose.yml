@@ -23,8 +23,10 @@ services:
       # Antall samtidige workspaces. Start konservativt og benchmark Raven
       # (i9-14900KS, 96 GB RAM) før grensen økes.
       MAX_ACTIVE_WORKSPACES: "4"
-      # Container-image for Chrome-workspaces (KasmVNC-basert web-stream).
-      WORKSPACE_IMAGE: "lscr.io/linuxserver/chromium:latest"
+      # Container-image for Chrome-workspaces. Kasm-branchen (KasmVNC)
+      # fungerer over ren HTTP i iframes; :latest (Selkies) krever HTTPS
+      # med gyldig sertifikat og en TLS-terminerende proxy — se README.
+      WORKSPACE_IMAGE: "lscr.io/linuxserver/chromium:kasm"
       WORKSPACE_MEMORY: "3g"
       WORKSPACE_CPUS: "2"
       WORKSPACE_SHM_SIZE: "1g"

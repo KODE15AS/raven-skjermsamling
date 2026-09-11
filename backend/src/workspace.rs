@@ -62,7 +62,7 @@ impl Controller {
         let driver = match env_or("WORKSPACE_DRIVER", "docker").as_str() {
             "mock" => Driver::Mock,
             _ => Driver::Cli(CliDriver {
-                image: env_or("WORKSPACE_IMAGE", "lscr.io/linuxserver/chromium:latest"),
+                image: env_or("WORKSPACE_IMAGE", "lscr.io/linuxserver/chromium:kasm"),
                 memory: env_or("WORKSPACE_MEMORY", "3g"),
                 cpus: env_or("WORKSPACE_CPUS", "2"),
                 shm_size: env_or("WORKSPACE_SHM_SIZE", "1g"),

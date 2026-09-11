@@ -60,7 +60,8 @@
 
   {#if $you?.controls}
     <div class="control-banner">
-      Du kontrollerer en annen workspace – trykk <kbd>Esc</kbd> for å avslutte
+      Du kontrollerer en annen workspace – klikk «Avslutt kontroll» på tilen,
+      eller trykk <kbd>Esc</kbd>
     </div>
   {/if}
 

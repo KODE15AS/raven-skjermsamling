@@ -1,7 +1,8 @@
 <script>
   // Én workspace-tile: Selkies/KasmVNC-stream i iframe med permanent
   // eierfarge-ramme, ev. ytre kontrollramme og eksplisitt kontroll-UX.
-  import { resolveUrl } from './store.js';
+  import { resolveUrl, sendCursor } from './store.js';
+  import Cursors from './Cursors.svelte';
 
   let {
     p, // deltageren som eier workspacen
@@ -11,6 +12,7 @@
     onTakeControl = () => {},
     onRelease = () => {},
     onMinimize = () => {},
+    onRestore = () => {},
   } = $props();
 
   const isOwner = $derived(viewer && viewer.id === p.id);
@@ -35,11 +37,23 @@
     if (canTake) onTakeControl(p.id);
     else if (iControl) onRelease();
   }
+
+  let viewportEl = $state(null);
+
+  // Ghost-peker: send posisjon normalisert innenfor denne tilen. Fyrer når
+  // pekeren er over overlay/placeholder; over egen interaktiv stream går
+  // musen inn i iframen (og OS-pekeren er synlig i selve streamen).
+  function onMove(e) {
+    if (readonly || !viewportEl) return;
+    const r = viewportEl.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width;
+    const y = (e.clientY - r.top) / r.height;
+    if (x >= 0 && x <= 1 && y >= 0 && y <= 1) sendCursor(p.id, x, y);
+  }
 </script>
 
 <div
   class="tile"
-  class:minimized-hidden={p.minimized}
   style="--owner: {p.color}; --controller: {controller ? controller.color : 'transparent'}"
 >
   {#if controller}
@@ -62,11 +76,18 @@
       </button>
     {/if}
     {#if isOwner && !readonly}
-      <button class="mini" onclick={onMinimize} title="Minimer din tile">–</button>
+      {#if p.minimized}
+        <button class="mini" onclick={onRestore} title="Vis din tile på veggen igjen">
+          Vis på veggen
+        </button>
+      {:else}
+        <button class="mini" onclick={onMinimize} title="Skjul din tile fra veggen">–</button>
+      {/if}
     {/if}
   </header>
 
-  <div class="viewport">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="viewport" bind:this={viewportEl} onmousemove={onMove}>
     {#if url}
       <iframe
         src={url}
@@ -108,6 +129,7 @@
     {:else}
       <div class="placeholder"><span>Venter …</span></div>
     {/if}
+    <Cursors tileId={p.id} />
   </div>
 </div>
 
@@ -282,9 +304,5 @@
     to {
       transform: rotate(360deg);
     }
-  }
-
-  .minimized-hidden {
-    display: none;
   }
 </style>

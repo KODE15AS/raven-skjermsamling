@@ -85,8 +85,11 @@ kiosk_running() {
 }
 
 start_kiosk() {
+  # --start-fullscreen i tillegg til --kiosk: under Wayland ignorerer
+  # Chromium av og til --kiosk og åpner i vindu.
   local args=(
     --kiosk
+    --start-fullscreen
     --noerrdialogs
     --disable-session-crashed-bubble
     --user-data-dir="$PROFILE"

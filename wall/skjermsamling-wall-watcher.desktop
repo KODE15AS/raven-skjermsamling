@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Skjermsamling Wall Watcher
+Comment=Starter /wall i kiosk automatisk når 70"-skjermen kobles til
+Exec=/opt/skjermsamling/skjermsamling-wall-watcher.sh
+X-GNOME-Autostart-enabled=true

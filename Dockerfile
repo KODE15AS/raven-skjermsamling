@@ -9,7 +9,9 @@ RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
-FROM rust:1.98-slim AS backend
+# Viktig: build- og runtime-stage må bruke samme Debian-versjon (bookworm),
+# ellers krever binæren nyere glibc enn runtime-imaget har.
+FROM rust:1.98-slim-bookworm AS backend
 WORKDIR /app
 COPY backend/Cargo.toml backend/Cargo.lock* ./
 COPY backend/src ./src

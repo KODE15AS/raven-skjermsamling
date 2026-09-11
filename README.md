@@ -1,1 +1,119 @@
-# raven-skjermsamling
+# Skjermsamling
+
+Én generell tjeneste på **Raven** som gir personer i samme fysiske rom en felles,
+interaktiv arbeidsflate på 70" 4K-skjermen. Alle deltagere er likeverdige –
+ingen host, moderator eller manager.
+
+Hver deltager får sin egen fjernstyrte Chrome-instans som fysisk kjører på
+Raven, og 70"-skjermen viser alle aktive workspaces samlet. Opplevelsen skal
+være **multiplayer web**, ikke tradisjonell remote desktop.
+
+## Arkitektur
+
+```
+┌─────────────────────────────── Raven ───────────────────────────────┐
+│                                                                     │
+│  skjermsamling (container, port 8015)                               │
+│  ├─ Rust-backend (axum): WebSocket presence, SQLite,                │
+│  │  session-controller (create/start/stop/status/destroy)           │
+│  └─ Svelte-frontend: / (lobby), /samling (tiles), /wall (70")       │
+│                                                                     │
+│  skjermsamling-ws-<id> … (dynamiske workspace-containere)           │
+│  └─ Chromium + KasmVNC web-stream, én per deltager, ephemeral       │
+│                                                                     │
+│  UHD 770 → 70"-skjerm (Chromium kiosk på /wall)                     │
+│  RTX 5080 → reservert CUDA/AI/LLM (brukes ALDRI av Skjermsamling)   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+- **`Workspace`** er den interne abstraksjonen. Eneste type i MVP er Chrome,
+  men modellen er laget for senere typer (Linux desktop, terminal, VS Code,
+  AI-agent, …) uten å endre produktmodellen.
+- **Session-controlleren** i backend er eneste komponent som får starte/stoppe
+  workspaces, og støtter kun de faste operasjonene `create`, `start`, `stop`,
+  `status`, `destroy`. Frontend kan aldri sende Docker-parametere.
+- Workspace-containerne får aldri docker-socket, `--privileged`,
+  host-filsystem, host-nettverk eller RTX 5080 (`--cap-drop ALL`,
+  `no-new-privileges`, minne-/CPU-grenser).
+
+## Kom i gang på Raven
+
+```bash
+git clone https://github.com/KODE15AS/raven-skjermsamling
+cd raven-skjermsamling
+docker compose up -d --build
+```
+
+Åpne deretter `http://raven:8015/` (kun godkjent lokalnett/Tailscale – ingen
+login i MVP). Bruker skriver navn, velger **Deltager** eller **Observer**, og
+trykker **Gå til Skjermsamling**.
+
+### 70"-veggen
+
+Kjør Chromium i kiosk-modus på Ravens lokale Ubuntu-desktop (motherboard-HDMI
+/ UHD 770):
+
+```bash
+chromium --kiosk --noerrdialogs --disable-session-crashed-bubble \
+  http://localhost:8015/wall
+```
+
+`/wall` er alltid read-only: den joiner aldri sessionen og sender aldri
+tastatur- eller mus-input (egen `watch`-modus i WebSocket-protokollen).
+
+## Funksjoner i MVP
+
+| Funksjon | Hvordan |
+| --- | --- |
+| Join uten konto | Kun navn + rolle; automatisk unik farge (stabil per navn via SQLite) |
+| Live presence | WebSocket-broadcast ved join/leave/disconnect/reconnect, minimize/restore, workspace start/stopp og kontroll-endringer |
+| Egen Chrome på Raven | Ephemeral container per deltager; slettes ved leave eller når disconnect-timeout utløper (`WORKSPACE_TIMEOUT_SECS`) |
+| Tilbake uten ny session | Session-token i localStorage; reconnect innen timeout gjenbruker workspacen |
+| Tiles på 70" | Responsivt grid som tilpasser seg antall aktive tiles (1/2/2×2/3×2/3×3) |
+| Minimize/restore | Egen tile kan minimeres til navnefane nederst; kun eieren kan restore |
+| Demokratisk kontroll | Dobbeltklikk en annen tile → aktiver kontroll. Grønn eierramme beholdes, kontrollerens farge vises som ytre ramme + «X kontrollerer». Esc eller dobbeltklikk avslutter. Kun én ekstern controller per workspace |
+| Fargede ghost-cursors | HTML-overlay (ikke OS-pekere) med navn, normaliserte x/y via WebSocket, ~30 Hz |
+| Observer | Navn/farge og presence, ser alle workspaces, får aldri egen Chrome og sender aldri OS-input |
+
+## Konfigurasjon
+
+| Variabel | Default | Beskrivelse |
+| --- | --- | --- |
+| `MAX_ACTIVE_WORKSPACES` | `4` | Maks samtidige workspaces. Start konservativt, benchmark Raven før økning |
+| `WORKSPACE_IMAGE` | `lscr.io/linuxserver/chromium:latest` | Image for Chrome-workspaces |
+| `WORKSPACE_MEMORY` / `WORKSPACE_CPUS` / `WORKSPACE_SHM_SIZE` | `3g` / `2` / `1g` | Ressursgrenser per workspace |
+| `WORKSPACE_TIMEOUT_SECS` | `120` | Tid fra disconnect til workspacen stoppes og slettes |
+| `WORKSPACE_PUBLIC_HOST` | *(tom)* | Vertsnavn klientene når workspacene på; tom = samme host som nettleseren bruker |
+| `WORKSPACE_DRIVER` | `docker` | `mock` for utvikling uten Docker |
+| `BIND` | `0.0.0.0:8015` | Backendens lytteadresse |
+| `DB_PATH` | `skjermsamling.db` | SQLite-fil (fargetildelinger + hendelseslogg) |
+| `STATIC_DIR` | `../frontend/dist` | Katalog med bygget frontend |
+
+## Utvikling (uten Docker)
+
+```bash
+# Backend med mock-workspaces
+cd backend
+WORKSPACE_DRIVER=mock cargo run
+
+# Frontend med hot reload (proxyer /ws til backend)
+cd frontend
+npm install
+npm run dev
+```
+
+Mock-driveren gir hver deltager en enkel interaktiv placeholder-side i stedet
+for en ekte Chromium-container, slik at hele presence-/kontroll-/cursor-flyten
+kan testes på en vanlig utviklingsmaskin.
+
+## Sikkerhet og drift
+
+- MVP er kun for godkjent lokalnett/Tailscale. Ikke eksponer port 8015 eller
+  workspace-portene mot internett.
+- Kun `skjermsamling`-containeren har docker-socket (den er
+  session-controlleren). Workspace-containere startes med fast argumentliste
+  bygget server-side: `--cap-drop ALL`, `no-new-privileges`, minne/CPU-grenser,
+  aldri GPU.
+- Sessions er ephemeral: ingen brukerprofiler; workspaces slettes ved leave
+  eller timeout. Brukeren logger selv inn på ønskede websider inne i sin
+  Chrome-session.

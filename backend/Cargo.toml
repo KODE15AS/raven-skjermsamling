@@ -1,0 +1,23 @@
+[package]
+name = "skjermsamling"
+version = "0.1.0"
+edition = "2021"
+description = "Skjermsamling – felles interaktiv arbeidsflate på Raven"
+license = "MIT"
+
+[dependencies]
+axum = { version = "0.7", features = ["ws"] }
+futures-util = "0.3"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["fs", "trace"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+rand = "0.8"
+
+[profile.release]
+lto = true

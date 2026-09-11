@@ -1,0 +1,35 @@
+# Skjermsamling på Raven – vanlig Docker, ikke Swarm.
+#
+# Workspace-containerne (Chromium + KasmVNC/Selkies) startes dynamisk av
+# session-controlleren i backend og får ALDRI docker-socket, --privileged,
+# host-filsystem, host-nettverk eller RTX 5080.
+
+services:
+  skjermsamling:
+    build: .
+    container_name: skjermsamling
+    restart: unless-stopped
+    ports:
+      - "8015:8015"
+    volumes:
+      # Kun session-controlleren får styre Docker – aldri workspaces.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - skjermsamling-data:/data
+    environment:
+      # Antall samtidige workspaces. Start konservativt og benchmark Raven
+      # (i9-14900KS, 96 GB RAM) før grensen økes.
+      MAX_ACTIVE_WORKSPACES: "4"
+      # Container-image for Chrome-workspaces (KasmVNC-basert web-stream).
+      WORKSPACE_IMAGE: "lscr.io/linuxserver/chromium:latest"
+      WORKSPACE_MEMORY: "3g"
+      WORKSPACE_CPUS: "2"
+      WORKSPACE_SHM_SIZE: "1g"
+      # Hvor lenge en frakoblet session beholdes før Chrome-workspacen slettes.
+      WORKSPACE_TIMEOUT_SECS: "120"
+      # Vertsnavnet klienter når workspacene på. Tom = bruk samme host som
+      # nettleseren står på (anbefalt for lokalnett/Tailscale).
+      WORKSPACE_PUBLIC_HOST: ""
+      RUST_LOG: "skjermsamling=info"
+
+volumes:
+  skjermsamling-data:

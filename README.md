@@ -53,6 +53,11 @@ trykker **Gå til Skjermsamling**.
 `/wall` er alltid read-only: den joiner aldri sessionen og sender aldri
 tastatur- eller mus-input (egen `watch`-modus i WebSocket-protokollen).
 
+**Fysisk kabling og systemoppsett på Raven:** se
+[docs/KABLET-OPPKOBLING.md](docs/KABLET-OPPKOBLING.md) — kort fasit for
+hvilke porter skjermene skal stå i, hvorfor begge skal være fast tilkoblet,
+og hvilke systemendringer som er gjort (NVIDIA-KMS av, Xorg, wmctrl).
+
 **Automatisk kiosk (anbefalt):** `wall/skjermsamling-wall-watcher.sh` kjører
 på Ravens lokale Ubuntu-desktop og starter Chromium i kiosk-modus på `/wall`
 automatisk når 70"-skjermen kobles til (gjenkjennes på at EDID inneholder

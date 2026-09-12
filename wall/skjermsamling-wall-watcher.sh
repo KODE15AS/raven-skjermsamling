@@ -49,6 +49,16 @@ find_browser() {
   echo ""
 }
 
+# Uten grafisk session (typisk: startet over SSH) kan Chromium aldri åpne
+# seg på skjermen — da spinner watcheren i det uendelige. Stopp heller med
+# tydelig beskjed.
+if [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  log "FEIL: ingen grafisk session (DISPLAY/WAYLAND_DISPLAY er tomme)."
+  log "Watcheren må startes fra en terminal på Ravens desktop – ikke over SSH."
+  log "(Ved innlogging på desktopen starter den automatisk via autostart.)"
+  exit 1
+fi
+
 BROWSER="$(find_browser)"
 if [ -z "$BROWSER" ]; then
   log "FEIL: fant ingen chromium/chrome i PATH. Installer med: sudo snap install chromium"
